@@ -5,19 +5,64 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tetris</title>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+    
+    body {
+        font-family: 'Arial', sans-serif;
+        text-align: center;
+        margin: 20px;
+    }
+
+    h1 {
+        color: #333;
+    }
+
+    #tetris-container {
+        width: 300px;
+        height: 600px;
+        border: 1px solid #333;
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden;
+    }
+
+    canvas {
+        display: block;
+        margin: 0 auto;
+    }
+
+    /* Customize block colors and styling as needed */
+    canvas {
+        background-color: #f0f0f0;
+    }
+
+    /* Customize block colors and styling as needed */
+    canvas {
+        background-color: #f0f0f0;
+    }
+
+    /* Styling for game over alert */
+    #game-over-alert {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #fff;
+        padding: 20px;
+        border: 2px solid #333;
+        border-radius: 5px;
+        display: none;
+    }
+    </style>
+
 </head>
 <body>
     <h1>Tetris Game</h1>
     <div id="tetris-container"></div>
     
-    <script>
-        $(document).ready(function(){
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
-
-            // Add Tetris game logic here
-        });
-    </script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="tetris-logic.js"></script>
 </body>
 </html>
+
