@@ -1,68 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris</title>
-    <style>
-    
-    body {
-        font-family: 'Arial', sans-serif;
-        text-align: center;
-        margin: 20px;
-    }
+from flask import Flask, render_template
+from flask_sockets import Sockets
+import json
+import random
 
-    h1 {
-        color: #333;
-    }
+app = Flask(__name__)
+sockets = Sockets(app)
 
-    #tetris-container {
-        width: 300px;
-        height: 600px;
-        border: 1px solid #333;
-        margin: 0 auto;
-        position: relative;
-        overflow: hidden;
-    }
+GRID_SIZE = 30
+BOARD_WIDTH, BOARD_HEIGHT = 10, 20
 
-    canvas {
-        display: block;
-        margin: 0 auto;
-    }
+PIECES = [
+    [[1, 1, 1, 1]],
+    [[1, 1], [1, 1]],
+    [[1, 1, 1], [0, 1, 0]],
+    [[1, 1, 1], [1, 0, 0]],
+    [[1, 1, 1], [0, 0, 1]],
+    [[1, 1, 0], [0, 1, 1]],
+    [[0, 1, 1], [1, 1, 0]]
+]
 
-    /* Customize block colors and styling as needed */
-    canvas {
-        background-color: #f0f0f0;
-    }
+def new_piece():
+    piece = random.choice(PIECES)
+    color = random.choice(['#00FFFF', '#FF00FF', '#FFFF00', '#00FF00', '#0000FF', '#FFA500', '#FF0000'])
+    return piece, color
 
-    /* Customize block colors and styling as needed */
-    canvas {
-        background-color: #f0f0f0;
-    }
+def create_board():
+    return [[None] * BOARD_WIDTH for _ in range(BOARD_HEIGHT)]
 
-    /* Styling for game over alert */
-    #game-over-alert {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: #fff;
-        padding: 20px;
-        border: 2px solid #333;
-        border-radius: 5px;
-        display: none;
-    }
-    </style>
+def draw_piece(board, piece, color, piece_x, piece_y):
+    for y, row in enumerate(piece):
+        for x, cell in enumerate(row):
+            if cell:
+                board[piece_y + y][piece_x + x] = color
 
-</head>
-<body>
-    <h1>Tetris Game</h1>
-    <div id="tetris-container"></div>
-    
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="tetris-logic.js"></script>
-</body>
-</html>
+def remove_completed_lines(board):
+    lines_to_remove = [i for i, row in enumerate(board) if all(row)]
+    for line in lines_to_remove:
+        del board[line]
+        board.insert(0, [None] * BOARD_WIDTH)
 
+def send_board_state(board, ws):
+    payload = {'board': board}
+    ws.send(json.dumps(payload))
+
+@sockets.route('/ws')
+def ws_handler(ws):
+    board = create_board()
+    current_piece, current_color = new_piece()
+    piece_x, piece_y = BOARD_WIDTH // 2 - len(current_piece[0]) // 2, 0
+
+    while not ws.closed:
+        draw_piece(board, current_piece, current_color, piece_x, piece_y)
+        remove_completed_lines(board)
+        send_board_state(board, ws)
+
+        current_piece, current_color = new_piece()
+        piece_x, piece_y = BOARD_WIDTH // 2 - len(current_piece[0]) // 2, 0
+
+    print('WebSocket closed')
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+
+    server = pywsgi.WSGIServer(('127.0.0.1', 5000), app, handler_class=WebSocketHandler)
+    server.serve_forever()
